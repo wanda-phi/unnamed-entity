@@ -149,8 +149,7 @@ macro_rules! __impl_entity_id_delta {
         impl core::ops::Sub<isize> for $id {
             type Output = $id;
             fn sub(self, x: isize) -> Self {
-                use $crate::EntityId;
-                Self::from_idx(self.to_idx().checked_sub_signed(x).unwrap())
+                self + (-x)
             }
         }
 
