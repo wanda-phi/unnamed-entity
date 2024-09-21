@@ -136,7 +136,7 @@ macro_rules! __impl_entity_id_delta {
             type Output = $id;
             fn add(self, x: isize) -> Self {
                 use $crate::EntityId;
-                Self::from_idx(self.to_idx().add_signed(x))
+                Self::from_idx(self.to_idx().checked_add_signed(x).unwrap())
             }
         }
 
@@ -150,7 +150,7 @@ macro_rules! __impl_entity_id_delta {
             type Output = $id;
             fn sub(self, x: isize) -> Self {
                 use $crate::EntityId;
-                Self::from_idx(self.to_idx().sub_signed(x))
+                Self::from_idx(self.to_idx().checked_sub_signed(x).unwrap())
             }
         }
 
