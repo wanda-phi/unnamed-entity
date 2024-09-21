@@ -159,6 +159,32 @@ macro_rules! __impl_entity_id_delta {
             }
         }
 
+        impl core::ops::Add<i32> for $id {
+            type Output = $id;
+            fn add(self, x: i32) -> Self {
+                self + (x as isize)
+            }
+        }
+
+        impl core::ops::AddAssign<i32> for $id {
+            fn add_assign(&mut self, x: i32) {
+                *self = *self + (x as isize);
+            }
+        }
+
+        impl core::ops::Sub<i32> for $id {
+            type Output = $id;
+            fn sub(self, x: i32) -> Self {
+                self - (x as isize)
+            }
+        }
+
+        impl core::ops::SubAssign<i32> for $id {
+            fn sub_assign(&mut self, x: i32) {
+                *self = *self - (x as isize);
+            }
+        }
+
         impl core::ops::Sub<$id> for $id {
             type Output = isize;
             fn sub(self, x: Self) -> isize {
