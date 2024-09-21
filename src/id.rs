@@ -132,6 +132,34 @@ macro_rules! __impl_entity_id_delta {
             }
         }
 
+        impl core::ops::Add<isize> for $id {
+            type Output = $id;
+            fn add(self, x: isize) -> Self {
+                use $crate::EntityId;
+                Self::from_idx(self.to_idx().add_signed(x))
+            }
+        }
+
+        impl core::ops::AddAssign<isize> for $id {
+            fn add_assign(&mut self, x: isize) {
+                *self = *self + x;
+            }
+        }
+
+        impl core::ops::Sub<isize> for $id {
+            type Output = $id;
+            fn sub(self, x: isize) -> Self {
+                use $crate::EntityId;
+                Self::from_idx(self.to_idx().sub_signed(x))
+            }
+        }
+
+        impl core::ops::SubAssign<isize> for $id {
+            fn sub_assign(&mut self, x: isize) {
+                *self = *self - x;
+            }
+        }
+
         impl core::ops::Sub<$id> for $id {
             type Output = isize;
             fn sub(self, x: Self) -> isize {
