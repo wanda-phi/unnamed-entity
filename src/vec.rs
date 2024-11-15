@@ -1,3 +1,4 @@
+use core::cmp::Ordering;
 use core::hash::Hash;
 use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
@@ -156,6 +157,27 @@ impl<I: EntityId, V> EntityVec<I, V> {
         V: Ord,
     {
         match self.vals.binary_search(x) {
+            Ok(x) => Ok(I::from_idx(x)),
+            Err(x) => Err(I::from_idx(x)),
+        }
+    }
+
+    pub fn binary_search_by<'a, F>(&'a self, f: F) -> Result<I, I>
+    where
+        F: FnMut(&'a V) -> Ordering,
+    {
+        match self.vals.binary_search_by(f) {
+            Ok(x) => Ok(I::from_idx(x)),
+            Err(x) => Err(I::from_idx(x)),
+        }
+    }
+
+    pub fn binary_search_by_key<'a, B, F>(&'a self, b: &B, f: F) -> Result<I, I>
+    where
+        F: FnMut(&'a V) -> B,
+        B: Ord,
+    {
+        match self.vals.binary_search_by_key(b, f) {
             Ok(x) => Ok(I::from_idx(x)),
             Err(x) => Err(I::from_idx(x)),
         }
