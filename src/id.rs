@@ -17,6 +17,13 @@ macro_rules! make_res_type {
         )]
         pub struct $t($b);
 
+        impl $t {
+            pub const fn from_usize_const(val: usize) -> Self {
+                let tmp = (val + 1) as $i;
+                $t(<$b>::new(tmp).unwrap())
+            }
+        }
+
         impl From<$t> for usize {
             fn from(x: $t) -> usize {
                 (x.0.get() - 1).try_into().unwrap()
@@ -96,6 +103,28 @@ macro_rules! __impl_entity_id {
             ) -> core::result::Result<(), std::fmt::Error> {
                 use $crate::EntityId;
                 write!(f, "{}", self.to_idx())
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! __impl_entity_id_const {
+    ($v:vis, $id:ident, $t:ty) => {
+        impl $id {
+            pub const fn from_idx_const(val: usize) -> Self {
+                Self(val as $t)
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! __impl_entity_id_const_reserved {
+    ($v:vis, $id:ident, $t:ty) => {
+        impl $id {
+            pub const fn from_idx_const(val: usize) -> Self {
+                Self(<$t>::from_usize_const(val))
             }
         }
     };
@@ -222,20 +251,24 @@ macro_rules! __reserved_ty {
 macro_rules! entity_id {
     ($v:vis id $id:ident $t:ty; $($rest:tt)*) => {
         $crate::__impl_entity_id!($v, $id, $t);
+        $crate::__impl_entity_id_const!($v, $id, $t);
         $crate::entity_id!{ $($rest)* }
     };
     ($v:vis id $id:ident $t:ty, delta; $($rest:tt)*) => {
         $crate::__impl_entity_id!($v, $id, $t);
+        $crate::__impl_entity_id_const!($v, $id, $t);
         $crate::__impl_entity_id_delta!($v, $id, $t);
         $crate::entity_id!{ $($rest)* }
     };
     ($v:vis id $id:ident $t:tt, reserve 1; $($rest:tt)*) => {
         $crate::__impl_entity_id!($v, $id, $crate::__reserved_ty!($t));
+        $crate::__impl_entity_id_const_reserved!($v, $id, $crate::__reserved_ty!($t));
         $crate::entity_id!{ $($rest)* }
     };
     ($v:vis id $id:ident $t:tt, reserve 1, delta; $($rest:tt)*) => {
         $crate::__impl_entity_id!($v, $id, $crate::__reserved_ty!($t));
         $crate::__impl_entity_id_delta!($v, $id, $t);
+        $crate::__impl_entity_id_const_reserved!($v, $id, $crate::__reserved_ty!($t));
         $crate::entity_id!{ $($rest)* }
     };
     () => {};
