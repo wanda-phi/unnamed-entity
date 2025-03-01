@@ -42,7 +42,9 @@ impl<I: EntityId, V> EntityVec<I, V> {
     ///
     /// The caller must ensure that `idx` is a valid index within this vector.
     pub unsafe fn get_unchecked(&self, idx: I) -> &V {
-        self.vals.get_unchecked(idx.to_idx())
+        unsafe {
+            self.vals.get_unchecked(idx.to_idx())
+        }
     }
 
     /// Gets a given item of the vector, without checking index validity.
@@ -51,7 +53,9 @@ impl<I: EntityId, V> EntityVec<I, V> {
     ///
     /// The caller must ensure that `idx` is a valid index within this vector.
     pub unsafe fn get_unchecked_mut(&mut self, idx: I) -> &mut V {
-        self.vals.get_unchecked_mut(idx.to_idx())
+        unsafe {
+            self.vals.get_unchecked_mut(idx.to_idx())
+        }
     }
 
     pub fn push(&mut self, val: V) -> I {
