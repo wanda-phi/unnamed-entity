@@ -22,6 +22,10 @@ macro_rules! make_res_type {
                 let tmp = (val + 1) as $i;
                 $t(<$b>::new(tmp).unwrap())
             }
+
+            pub const fn to_usize_const(self) -> usize {
+                (self.0.get() - 1) as usize
+            }
         }
 
         impl From<$t> for usize {
@@ -115,6 +119,10 @@ macro_rules! __impl_entity_id_const {
             pub const fn from_idx_const(val: usize) -> Self {
                 Self(val as $t)
             }
+
+            pub const fn to_idx_const(self) -> usize {
+                self.0 as usize
+            }
         }
     };
 }
@@ -125,6 +133,10 @@ macro_rules! __impl_entity_id_const_reserved {
         impl $id {
             pub const fn from_idx_const(val: usize) -> Self {
                 Self(<$t>::from_usize_const(val))
+            }
+
+            pub const fn to_idx_const(self) -> usize {
+                self.0.to_usize_const()
             }
         }
     };
