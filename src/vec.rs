@@ -4,10 +4,11 @@ use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
 use std::fmt;
 
-use crate::id::EntityIds;
 use crate::EntityId;
+use crate::id::EntityIds;
 
 #[derive(Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "bincode", derive(bincode::Encode, bincode::Decode))]
 pub struct EntityVec<I: EntityId, V> {
     vals: Vec<V>,
     ids: PhantomData<I>,
@@ -42,9 +43,7 @@ impl<I: EntityId, V> EntityVec<I, V> {
     ///
     /// The caller must ensure that `idx` is a valid index within this vector.
     pub unsafe fn get_unchecked(&self, idx: I) -> &V {
-        unsafe {
-            self.vals.get_unchecked(idx.to_idx())
-        }
+        unsafe { self.vals.get_unchecked(idx.to_idx()) }
     }
 
     /// Gets a given item of the vector, without checking index validity.
@@ -53,9 +52,7 @@ impl<I: EntityId, V> EntityVec<I, V> {
     ///
     /// The caller must ensure that `idx` is a valid index within this vector.
     pub unsafe fn get_unchecked_mut(&mut self, idx: I) -> &mut V {
-        unsafe {
-            self.vals.get_unchecked_mut(idx.to_idx())
-        }
+        unsafe { self.vals.get_unchecked_mut(idx.to_idx()) }
     }
 
     pub fn push(&mut self, val: V) -> I {

@@ -4,8 +4,8 @@ use core::ops::Index;
 
 use std::fmt;
 
-use crate::id::EntityIds;
 use crate::EntityId;
+use crate::id::EntityIds;
 
 use bitvec::order::Lsb0;
 use bitvec::vec::BitVec;
@@ -115,6 +115,26 @@ impl<I: EntityId> EntityBitVec<I> {
     pub fn set(&mut self, index: I, value: bool) {
         self.vals.set(index.to_idx(), value);
     }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut res = vec![0u8; self.len().div_ceil(8)];
+        for (i, bit) in self.vals.iter().enumerate() {
+            res[i / 8] |= u8::from(*bit) << (i % 8);
+        }
+        res
+    }
+
+    fn from_bytes(buf: &[u8], len: usize) -> Self {
+        assert_eq!(buf.len(), len.div_ceil(8));
+        let mut res = BitVec::repeat(false, len);
+        for i in 0..len {
+            res.set(i, (buf[i / 8] & (1 << (i % 8))) != 0);
+        }
+        EntityBitVec {
+            vals: res,
+            ids: PhantomData,
+        }
+    }
 }
 
 impl<I: EntityId> Default for EntityBitVec<I> {
@@ -128,7 +148,9 @@ where
     I: EntityId,
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_map().entries(self).finish()
+        fmt.debug_map()
+            .entries(self.iter().map(|(i, v)| (i, u8::from(*v))))
+            .finish()
     }
 }
 
@@ -283,3 +305,6 @@ impl<I: EntityId> Extend<bool> for EntityBitVec<I> {
 
 #[cfg(feature = "serde")]
 mod serde;
+
+#[cfg(feature = "bincode")]
+mod bincode;
