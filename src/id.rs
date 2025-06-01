@@ -1,8 +1,13 @@
 use core::hash::Hash;
 use core::marker::PhantomData;
 
-use std::fmt::Debug;
+use std::{
+    fmt::Debug,
+    num::{NonZeroU8, NonZeroU16, NonZeroU32},
+};
 
+#[cfg(feature = "bincode")]
+use bincode::{BorrowDecode, Decode, Encode};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -312,6 +317,241 @@ pub trait EntityId:
     fn from_idx(idx: usize) -> Self;
     fn to_idx(self) -> usize;
 }
+
+// new-style id
+
+pub trait EntityTag {
+    const PREFIX: &'static str = "ID";
+}
+pub trait EntityTagArith: EntityTag {}
+
+macro_rules! make_id {
+    ($ty:ident, $nzty:ident, $intty:ident) => {
+        pub struct $ty<Tag>($nzty, PhantomData<fn(Tag) -> Tag>);
+
+        impl<Tag> $ty<Tag> {
+            pub const fn from_idx_const(idx: usize) -> Self {
+                assert!(idx < 0xff);
+                let idx = (idx + 1) as $intty;
+                let idx = $nzty::new(idx).unwrap();
+                $ty(idx, PhantomData)
+            }
+
+            pub const fn to_idx_const(self) -> usize {
+                (self.0.get() - 1) as usize
+            }
+        }
+
+        impl<Tag: EntityTag> EntityId for $ty<Tag> {
+            fn from_idx(idx: usize) -> Self {
+                let idx = $intty::try_from(idx.checked_add(1).unwrap()).unwrap();
+                let idx = $nzty::new(idx).unwrap();
+                $ty(idx, PhantomData)
+            }
+
+            fn to_idx(self) -> usize {
+                let idx = self.0.get() - 1;
+                idx.try_into().unwrap()
+            }
+        }
+
+        impl<Tag> Copy for $ty<Tag> {}
+        impl<Tag> Clone for $ty<Tag> {
+            fn clone(&self) -> Self {
+                *self
+            }
+        }
+        impl<Tag: EntityTag> Debug for $ty<Tag> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}{}", Tag::PREFIX, self.to_idx())
+            }
+        }
+        impl<Tag: EntityTag> std::fmt::Display for $ty<Tag> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                if f.alternate() {
+                    write!(f, "{}", self.to_idx())
+                } else {
+                    write!(f, "{}{}", Tag::PREFIX, self.to_idx())
+                }
+            }
+        }
+        impl<Tag> Eq for $ty<Tag> {}
+        impl<Tag> PartialEq for $ty<Tag> {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        impl<Tag> Ord for $ty<Tag> {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                self.0.cmp(&other.0)
+            }
+        }
+        impl<Tag> PartialOrd for $ty<Tag> {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+        impl<Tag> Hash for $ty<Tag> {
+            fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+                self.0.hash(state);
+            }
+        }
+        #[cfg(feature = "serde")]
+        impl<Tag> Serialize for $ty<Tag> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                let idx = self.0.get() - 1;
+                idx.serialize(serializer)
+            }
+        }
+        #[cfg(feature = "serde")]
+        impl<'de, Tag> Deserialize<'de> for $ty<Tag> {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                let idx = $intty::deserialize(deserializer)?;
+                let idx = idx.checked_add(1).unwrap();
+                let idx = $nzty::new(idx).unwrap();
+                Ok($ty(idx, PhantomData))
+            }
+        }
+        #[cfg(feature = "bincode")]
+        impl<Tag> Encode for $ty<Tag> {
+            fn encode<E: bincode::enc::Encoder>(
+                &self,
+                encoder: &mut E,
+            ) -> Result<(), bincode::error::EncodeError> {
+                let idx = self.0.get() - 1;
+                idx.encode(encoder)
+            }
+        }
+        #[cfg(feature = "bincode")]
+        impl<Tag, Context> Decode<Context> for $ty<Tag> {
+            fn decode<D: bincode::de::Decoder<Context = Context>>(
+                decoder: &mut D,
+            ) -> Result<Self, bincode::error::DecodeError> {
+                let idx = $intty::decode(decoder)?;
+                let idx = idx.checked_add(1).unwrap();
+                let idx = $nzty::new(idx).unwrap();
+                Ok($ty(idx, PhantomData))
+            }
+        }
+        #[cfg(feature = "bincode")]
+        impl<'de, Tag, Context> BorrowDecode<'de, Context> for $ty<Tag> {
+            fn borrow_decode<D: bincode::de::BorrowDecoder<'de, Context = Context>>(
+                decoder: &mut D,
+            ) -> Result<Self, bincode::error::DecodeError> {
+                let idx = $intty::borrow_decode(decoder)?;
+                let idx = idx.checked_add(1).unwrap();
+                let idx = $nzty::new(idx).unwrap();
+                Ok($ty(idx, PhantomData))
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::Add<usize> for $ty<Tag> {
+            type Output = $ty<Tag>;
+            fn add(self, x: usize) -> Self {
+                use $crate::EntityId;
+                Self::from_idx(self.to_idx() + x)
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::AddAssign<usize> for $ty<Tag> {
+            fn add_assign(&mut self, x: usize) {
+                *self = *self + x;
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::Sub<usize> for $ty<Tag> {
+            type Output = $ty<Tag>;
+            fn sub(self, x: usize) -> Self {
+                use $crate::EntityId;
+                Self::from_idx(self.to_idx() - x)
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::SubAssign<usize> for $ty<Tag> {
+            fn sub_assign(&mut self, x: usize) {
+                *self = *self - x;
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::Add<isize> for $ty<Tag> {
+            type Output = $ty<Tag>;
+            fn add(self, x: isize) -> Self {
+                use $crate::EntityId;
+                Self::from_idx(self.to_idx().checked_add_signed(x).unwrap())
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::AddAssign<isize> for $ty<Tag> {
+            fn add_assign(&mut self, x: isize) {
+                *self = *self + x;
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::Sub<isize> for $ty<Tag> {
+            type Output = $ty<Tag>;
+            fn sub(self, x: isize) -> Self {
+                self + (-x)
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::SubAssign<isize> for $ty<Tag> {
+            fn sub_assign(&mut self, x: isize) {
+                *self = *self - x;
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::Add<i32> for $ty<Tag> {
+            type Output = $ty<Tag>;
+            fn add(self, x: i32) -> Self {
+                self + (x as isize)
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::AddAssign<i32> for $ty<Tag> {
+            fn add_assign(&mut self, x: i32) {
+                *self = *self + (x as isize);
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::Sub<i32> for $ty<Tag> {
+            type Output = $ty<Tag>;
+            fn sub(self, x: i32) -> Self {
+                self - (x as isize)
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::SubAssign<i32> for $ty<Tag> {
+            fn sub_assign(&mut self, x: i32) {
+                *self = *self - (x as isize);
+            }
+        }
+
+        impl<Tag: EntityTagArith> core::ops::Sub<$ty<Tag>> for $ty<Tag> {
+            type Output = isize;
+            fn sub(self, x: Self) -> isize {
+                use $crate::EntityId;
+                self.to_idx() as isize - x.to_idx() as isize
+            }
+        }
+
+        impl<Tag: EntityTagArith> $ty<Tag> {
+            pub fn range(self, other: $ty<Tag>) -> $crate::id::EntityIds<$ty<Tag>> {
+                use $crate::EntityId;
+                $crate::id::EntityIds::new_range(self.to_idx(), other.to_idx())
+            }
+        }
+    };
+}
+
+make_id!(EntityIdU8, NonZeroU8, u8);
+make_id!(EntityIdU16, NonZeroU16, u16);
+make_id!(EntityIdU32, NonZeroU32, u32);
 
 // iterator
 
