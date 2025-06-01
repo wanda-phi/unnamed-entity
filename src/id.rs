@@ -326,12 +326,12 @@ pub trait EntityTag {
 pub trait EntityTagArith: EntityTag {}
 
 macro_rules! make_id {
-    ($ty:ident, $nzty:ident, $intty:ident) => {
+    ($ty:ident, $nzty:ident, $intty:ident, $max:literal) => {
         pub struct $ty<Tag>($nzty, PhantomData<fn(Tag) -> Tag>);
 
         impl<Tag> $ty<Tag> {
             pub const fn from_idx_const(idx: usize) -> Self {
-                assert!(idx < 0xff);
+                assert!(idx < $max);
                 let idx = (idx + 1) as $intty;
                 let idx = $nzty::new(idx).unwrap();
                 $ty(idx, PhantomData)
@@ -549,9 +549,9 @@ macro_rules! make_id {
     };
 }
 
-make_id!(EntityIdU8, NonZeroU8, u8);
-make_id!(EntityIdU16, NonZeroU16, u16);
-make_id!(EntityIdU32, NonZeroU32, u32);
+make_id!(EntityIdU8, NonZeroU8, u8, 0xff);
+make_id!(EntityIdU16, NonZeroU16, u16, 0xffff);
+make_id!(EntityIdU32, NonZeroU32, u32, 0xffffffff);
 
 // iterator
 
