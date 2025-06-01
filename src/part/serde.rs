@@ -7,7 +7,7 @@ use serde::ser::{Serialize, SerializeMap, Serializer};
 use super::EntityPartVec;
 use crate::id::EntityId;
 
-impl<I: EntityId, V: Serialize> Serialize for EntityPartVec<I, V> {
+impl<I: EntityId + Serialize, V: Serialize> Serialize for EntityPartVec<I, V> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -34,7 +34,7 @@ impl<I: EntityId, V> DeserializeVisitor<I, V> {
 
 impl<'de, I, V> Visitor<'de> for DeserializeVisitor<I, V>
 where
-    I: EntityId,
+    I: EntityId + Deserialize<'de>,
     V: Deserialize<'de>,
 {
     type Value = EntityPartVec<I, V>;
@@ -59,7 +59,7 @@ where
 
 impl<'de, I, V> Deserialize<'de> for EntityPartVec<I, V>
 where
-    I: EntityId,
+    I: EntityId + Deserialize<'de>,
     V: Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
