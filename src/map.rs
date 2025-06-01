@@ -5,8 +5,8 @@ use core::ops::{Index, IndexMut};
 use std::collections::hash_map::RandomState;
 use std::fmt;
 
-use indexmap::map::IndexMap;
 use indexmap::Equivalent;
+use indexmap::map::IndexMap;
 
 use crate::id::EntityIds;
 use crate::{EntityId, EntityVec};

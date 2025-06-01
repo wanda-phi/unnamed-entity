@@ -291,26 +291,6 @@ macro_rules! entity_id {
     () => {};
 }
 
-#[cfg(feature = "serde")]
-pub trait EntityId:
-    Debug
-    + Copy
-    + Clone
-    + Send
-    + Sync
-    + Eq
-    + PartialEq
-    + Ord
-    + PartialOrd
-    + Hash
-    + Serialize
-    + for<'de> Deserialize<'de>
-{
-    fn from_idx(idx: usize) -> Self;
-    fn to_idx(self) -> usize;
-}
-
-#[cfg(not(feature = "serde"))]
 pub trait EntityId:
     Debug + Copy + Clone + Send + Sync + Eq + PartialEq + Ord + PartialOrd + Hash
 {

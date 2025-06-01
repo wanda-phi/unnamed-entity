@@ -1,9 +1,8 @@
-use bincode::{de::read::Reader, enc::write::Writer, BorrowDecode, Decode, Encode};
+use bincode::{BorrowDecode, Decode, Encode, de::read::Reader, enc::write::Writer};
 
 use crate::EntityId;
 
 use super::EntityBitVec;
-
 
 impl<I: EntityId> Encode for EntityBitVec<I> {
     fn encode<E: bincode::enc::Encoder>(
